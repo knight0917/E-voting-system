@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.db import models
 from .models import Voter, Vote
 from core.models import Position, Candidate, Title
 from core.serializers import PositionSerializer, CandidateSerializer, TitleSerializer
@@ -12,13 +13,24 @@ def api_login(request):
     password = request.data.get('password')
     
     try:
-        voter = Voter.objects.get(voters_id=voter_id)
+        # Case-insensitive lookup for convenience
+        voter = Voter.objects.get(voters_id__iexact=voter_id)
+        
+        # Verify password (hashed)
+        # Note: Empty password in DB should not match anything
+        if not voter.password:
+             return Response({'error': 'Account not fully set up (no password). Please contact admin.'}, status=status.HTTP_400_BAD_REQUEST)
+             
         if bcrypt.checkpw(password.encode('utf-8'), voter.password.encode('utf-8')):
             return Response({'token': voter.id, 'user': {'firstname': voter.firstname, 'lastname': voter.lastname, 'photo': voter.photo.url if voter.photo else None}})
         else:
             return Response({'error': 'Incorrect password'}, status=status.HTTP_400_BAD_REQUEST)
     except Voter.DoesNotExist:
-         return Response({'error': 'Voter not found'}, status=status.HTTP_404_NOT_FOUND)
+         return Response({'error': 'Voter ID not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        # Catch bcrypt errors or other issues
+        print(f"Login Error: {e}")
+        return Response({'error': 'Login error occurred'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def api_ballot(request):
@@ -26,7 +38,7 @@ def api_ballot(request):
     if not voter_id:
         return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
         
-    positions = Position.objects.order_by('priority')
+    positions = Position.objects.prefetch_related('candidates').order_by('priority')
     serializer = PositionSerializer(positions, many=True)
     
     # Get Election Title
@@ -92,20 +104,23 @@ def api_dashboard_stats(request):
     vote_count = Vote.objects.count()
     
     # Get tally: Positions -> Candidates -> Vote Count
-    positions = Position.objects.prefetch_related('candidates').all().order_by('priority')
+    # Optimize: Use annotation to count votes in database
+    positions = Position.objects.prefetch_related(
+        models.Prefetch('candidates', queryset=Candidate.objects.annotate(vote_count=Count('votes')).order_by('-vote_count'))
+    ).order_by('priority')
+    
     tally = []
     
     for pos in positions:
         candidates = []
         for cand in pos.candidates.all():
-            c_votes = Vote.objects.filter(candidate=cand).count()
             candidates.append({
                 'id': cand.id,
                 'name': f"{cand.firstname} {cand.lastname}",
-                'votes': c_votes
+                'symbol': cand.symbol.url if cand.symbol else None,
+                'votes': cand.vote_count
             })
-        # Sort candidates by votes descending
-        candidates.sort(key=lambda x: x['votes'], reverse=True)
+        
         tally.append({
             'position': pos.description,
             'candidates': candidates
@@ -140,7 +155,8 @@ def api_admin_voters(request):
         return Response(serializer.data)
     
     elif request.method == 'POST':
-        data = request.data.copy()
+        # Conversion to native dict to avoid QueryDict immutability/quirks
+        data = request.data.dict() if hasattr(request.data, 'dict') else request.data.copy()
         
         # Auto-generate Voter ID if not provided
         if 'voters_id' not in data or not data['voters_id']:
@@ -150,11 +166,14 @@ def api_admin_voters(request):
                     data['voters_id'] = vid
                     break
         
-        # Hash password
+        # Hash password - safely handle empty/missing cases
         raw_password = data.get('password')
-        if raw_password:
+        if raw_password and raw_password.strip():
              hashed = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
              data['password'] = hashed.decode('utf-8')
+        else:
+             # Fail if no password provided for new voter
+             return Response({'password': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
         
         serializer = VoterSerializer(data=data)
         if serializer.is_valid():
@@ -170,12 +189,15 @@ def api_admin_voter_detail(request, pk):
         return Response({'error': 'Voter not found'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'PUT':
-        data = request.data.copy()
+        # Conversion to native dict
+        data = request.data.dict() if hasattr(request.data, 'dict') else request.data.copy()
         
-        if 'password' in data and data['password']:
-             hashed = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+        raw_password = data.get('password')
+        if raw_password and raw_password.strip():
+             hashed = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt())
              data['password'] = hashed.decode('utf-8')
         elif 'password' in data:
+            # If password key exists but is empty, remove it so we don't overwrite with empty string
             del data['password']
 
         serializer = VoterSerializer(voter, data=data, partial=True)
@@ -199,7 +221,7 @@ def generate_candidate_id():
 @api_view(['GET', 'POST'])
 def api_admin_candidates(request):
     if request.method == 'GET':
-        candidates = Candidate.objects.all().order_by('-id')
+        candidates = Candidate.objects.select_related('position').all().order_by('-id')
         serializer = CandidateSerializer(candidates, many=True)
         return Response(serializer.data)
         
@@ -291,3 +313,23 @@ def api_election_title(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def api_admin_votes(request):
+    votes = Vote.objects.all().select_related('voter', 'candidate', 'position').order_by('-timestamp')
+    data = []
+    for vote in votes:
+        data.append({
+            'id': vote.id,
+            'voter_id_number': vote.voter.voters_id,
+            'candidate_name': f"{vote.candidate.firstname} {vote.candidate.lastname}",
+            'candidate_symbol': vote.candidate.symbol.url if vote.candidate.symbol else None,
+            'position_name': vote.position.description,
+            'timestamp': vote.timestamp
+        })
+    return Response(data)
+
+@api_view(['POST'])
+def api_admin_reset_votes(request):
+    Vote.objects.all().delete()
+    return Response({'success': True, 'message': 'All votes have been reset.'})

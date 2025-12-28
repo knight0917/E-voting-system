@@ -17,4 +17,6 @@ urlpatterns = [
     path('api/admin/positions/', api_views.api_admin_positions, name='api_admin_positions'),
     path('api/admin/positions/<int:pk>/', api_views.api_admin_position_detail, name='api_admin_position_detail'),
     path('api/admin/title/', api_views.api_election_title, name='api_election_title'),
+    path('api/admin/votes/', api_views.api_admin_votes, name='api_admin_votes'),
+    path('api/admin/votes/reset/', api_views.api_admin_reset_votes, name='api_admin_reset_votes'),
 ]

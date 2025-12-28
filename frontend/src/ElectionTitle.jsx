@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import './AdminDashboard.css'
+import DashboardLayout from './DashboardLayout'
+// import './AdminDashboard.css'
+
 
 function ElectionTitle() {
   const [title, setTitle] = useState("Voting System")
   const [loading, setLoading] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768)
   const [validationError, setValidationError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -19,10 +20,6 @@ function ElectionTitle() {
       return
     }
     fetchTitle()
-
-    const handleResize = () => setIsSidebarOpen(window.innerWidth > 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
   }, [navigate, token])
 
   const fetchTitle = async () => {
@@ -44,16 +41,6 @@ function ElectionTitle() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token')
-    navigate('/admin-login')
-  }
-
-  const toggleSidebar = (e) => {
-      e.preventDefault();
-      setIsSidebarOpen(!isSidebarOpen);
-  }
-
   const handleSubmit = async (e) => {
       e.preventDefault()
       setValidationError('')
@@ -68,6 +55,11 @@ function ElectionTitle() {
 
           await axios.post('http://127.0.0.1:8000/api/admin/title/', { header: title }, config)
           setSuccessMessage('Election title updated successfully!')
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+              setSuccessMessage('')
+          }, 3000)
       } catch (err) {
           console.error("Error saving title", err)
           let msg = "Failed to save title.";
@@ -79,140 +71,49 @@ function ElectionTitle() {
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Sidebar */}
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-            <span className="logo-lg"><b>Voting</b>System</span>
-        </div>
-        <div className="user-panel">
-            <div className="user-image">
-                <img src="https://ui-avatars.com/api/?name=Admin&background=fff&color=000" alt="User" />
-            </div>
-            <div className="user-info">
-                <p>System Administrator</p>
-                <span className="status"><i className="fa fa-circle text-success"></i> Online</span>
-            </div>
-        </div>
-        <ul className="sidebar-menu">
-            <li className="header">REPORTS</li>
-            <li><a href="/admin-dashboard"><i className="fa fa-gauge-high"></i> <span>Dashboard</span></a></li>
-            <li><a href="#"><i className="fa fa-lock"></i> <span>Votes</span></a></li>
-            
-            <li className="header">MANAGE</li>
-            <li><a href="/voters"><i className="fa fa-users"></i> <span>Voters</span></a></li>
-            <li><a href="/positions"><i className="fa fa-list-ul"></i> <span>Positions</span></a></li>
-            <li><a href="/candidates"><i className="fa fa-user-tie"></i> <span>Candidates</span></a></li>
-            
-            <li className="header">SETTINGS</li>
-            <li><a href="#"><i className="fa fa-file-lines"></i> <span>Ballot Position</span></a></li>
-            <li><a href="#" className="active"><i className="fa fa-font"></i> <span>Election Title</span></a></li>
-            
-            <li className="header">EXIT</li>
-            <li>
-                <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-                    <i className="fa fa-power-off text-danger"></i> <span>Logout</span>
-                </a>
-            </li>
-        </ul>
-      </aside>
-
-      {/* Main Content */}
-      <main className="main-content">
-        <header className="top-bar">
-            <a href="#" className="sidebar-toggle" onClick={toggleSidebar}>
-                <i className="fa fa-bars"></i>
-            </a>
-            <div className="top-menu">
-                <div className="user-menu">
-                    <img src="https://ui-avatars.com/api/?name=Admin&background=fff&color=000" className="user-image-sm" alt="User"/>
-                    <span className="hidden-xs">System Administrator</span>
+    <DashboardLayout title="Election Title" loading={loading}>
+        <div className="max-w-xl mx-auto">
+            <section className="bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden animate-fade-in">
+                <div className="p-4 border-b border-slate-800 bg-slate-800/50">
+                    <h3 className="text-lg font-semibold text-white">Configure Election Title</h3>
                 </div>
-            </div>
-        </header>
-
-        <div className="content-wrapper">
-            <section className="content-header">
-                <h1>
-                    Election Title
-                </h1>
-                <ol className="breadcrumb">
-                    <li><a href="/admin-dashboard"><i className="fa fa-home"></i> Home</a></li>
-                    <li className="active">Election Title</li>
-                </ol>
-            </section>
-
-            <section className="content">
-                <div className="row">
-                    <div className="col-md-12">
-                        <div className="box box-primary">
-                            <div className="box-header with-border">
-                                <h3 className="box-title">Configure Election Title</h3>
-                            </div>
-                            <form role="form" onSubmit={handleSubmit}>
-                                <div className="box-body">
-                                    {validationError && (
-                                        <div className="alert alert-danger">
-                                            <i className="fa fa-warning"></i> {validationError}
-                                        </div>
-                                    )}
-                                    {successMessage && (
-                                        <div className="alert alert-success">
-                                            <i className="fa fa-check"></i> {successMessage}
-                                        </div>
-                                    )}
-
-                                    <div className="form-group">
-                                        <label htmlFor="electionTitle">Election Title</label>
-                                        <input 
-                                            type="text" 
-                                            className="form-control" 
-                                            id="electionTitle" 
-                                            placeholder="Enter election title" 
-                                            value={title}
-                                            onChange={e => setTitle(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="box-footer">
-                                    <button type="submit" className="btn btn-primary btn-flat"><i className="fa fa-save"></i> Save</button>
-                                </div>
-                            </form>
+                
+                <form onSubmit={handleSubmit} className="p-6">
+                    {validationError && (
+                         <div className="bg-rose-500/10 border border-rose-500/50 text-rose-400 px-4 py-3 rounded-lg text-sm flex items-start gap-3 mb-6">
+                            <i className="fa fa-circle-exclamation mt-0.5"></i>
+                            <div>{validationError}</div>
                         </div>
+                    )}
+                    {successMessage && (
+                        <div className="bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 px-4 py-3 rounded-lg text-sm flex items-start gap-3 mb-6">
+                            <i className="fa fa-circle-check mt-0.5"></i>
+                            <div>{successMessage}</div>
+                        </div>
+                    )}
+
+                    <div className="mb-6">
+                        <label htmlFor="electionTitle" className="block text-xs font-medium text-slate-400 uppercase mb-2">Election Title</label>
+                        <input 
+                            type="text" 
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors shadow-inner" 
+                            id="electionTitle" 
+                            placeholder="Enter election title" 
+                            value={title}
+                            onChange={e => setTitle(e.target.value)}
+                            required
+                        />
                     </div>
-                </div>
+
+                    <div className="flex justify-end pt-4 border-t border-slate-800">
+                        <button type="submit" className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2">
+                            <i className="fa fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
             </section>
         </div>
-      </main>
-      
-      <style>{`
-          .box-primary {
-              border-top-color: #3c8dbc;
-          }
-          .box-footer {
-              border-top-left-radius: 0;
-              border-top-right-radius: 0;
-              border-bottom-right-radius: 3px;
-              border-bottom-left-radius: 3px;
-              border-top: 1px solid #f4f4f4;
-              padding: 10px;
-              background-color: #fff;
-          }
-          .alert {
-              padding: 15px;
-              margin-bottom: 20px;
-              border: 1px solid transparent;
-              border-radius: 4px;
-          }
-          .alert-success {
-              color: #3c763d;
-              background-color: #dff0d8;
-              border-color: #d6e9c6;
-          }
-      `}</style>
-    </div>
+    </DashboardLayout>
   )
 }
 

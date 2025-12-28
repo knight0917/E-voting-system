@@ -1,4 +1,7 @@
-/* Resets and basics */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -20,11 +23,6 @@ body {
   min-height: 100vh;
 }
 
-/* Light mode override matching system logic if needed */
-/* But AdminDashboard handles its own theming mostly */
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
+#root {
+  width: 100%;
 }

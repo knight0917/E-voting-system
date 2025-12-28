@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import './AdminDashboard.css'
+import DashboardLayout from './DashboardLayout'
+
 
 function Positions() {
   const [positions, setPositions] = useState([])
   const [loading, setLoading] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768)
+
   const [showModal, setShowModal] = useState(false)
   const [editMode, setEditMode] = useState(false)
   
@@ -29,10 +30,6 @@ function Positions() {
       return
     }
     fetchPositions()
-
-    const handleResize = () => setIsSidebarOpen(window.innerWidth > 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
   }, [navigate, token])
 
   const fetchPositions = async () => {
@@ -52,15 +49,7 @@ function Positions() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token')
-    navigate('/admin-login')
-  }
 
-  const toggleSidebar = (e) => {
-      e.preventDefault();
-      setIsSidebarOpen(!isSidebarOpen);
-  }
 
   const openAddModal = () => {
       setFormData({ 
@@ -121,7 +110,6 @@ function Positions() {
           console.error("Error saving position", err)
           let msg = "Failed to save position.";
           if (err.response && err.response.data) {
-              // Convert object error to string if possible or just use generic
               msg = JSON.stringify(err.response.data);
           }
           setValidationError(msg);
@@ -129,214 +117,91 @@ function Positions() {
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Sidebar */}
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-            <span className="logo-lg"><b>Voting</b>System</span>
-        </div>
-        <div className="user-panel">
-            <div className="user-image">
-                <img src="https://ui-avatars.com/api/?name=Admin&background=fff&color=000" alt="User" />
-            </div>
-            <div className="user-info">
-                <p>System Administrator</p>
-                <span className="status"><i className="fa fa-circle text-success"></i> Online</span>
-            </div>
-        </div>
-        <ul className="sidebar-menu">
-            <li className="header">REPORTS</li>
-            <li><a href="/admin-dashboard"><i className="fa fa-gauge-high"></i> <span>Dashboard</span></a></li>
-            <li><a href="#"><i className="fa fa-lock"></i> <span>Votes</span></a></li>
-            
-            <li className="header">MANAGE</li>
-            <li><a href="/voters"><i className="fa fa-users"></i> <span>Voters</span></a></li>
-            <li><a href="#" className="active"><i className="fa fa-list-ul"></i> <span>Positions</span></a></li>
-            <li><a href="/candidates"><i className="fa fa-user-tie"></i> <span>Candidates</span></a></li>
-            
-            <li className="header">SETTINGS</li>
-            <li><a href="#"><i className="fa fa-file-lines"></i> <span>Ballot Position</span></a></li>
-            <li><a href="/election-title"><i className="fa fa-font"></i> <span>Election Title</span></a></li>
-            
-            <li className="header">EXIT</li>
-            <li>
-                <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-                    <i className="fa fa-power-off text-danger"></i> <span>Logout</span>
+    <DashboardLayout title="Positions" loading={loading}>
+        <section className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden animate-fade-in">
+             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
+                <a href="#addnew" onClick={(e) => {e.preventDefault(); openAddModal()}} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+                    <i className="fa fa-plus"></i> New Position
                 </a>
-            </li>
-        </ul>
-      </aside>
-
-      {/* Main Content */}
-      <main className="main-content">
-        <header className="top-bar">
-            <a href="#" className="sidebar-toggle" onClick={toggleSidebar}>
-                <i className="fa fa-bars"></i>
-            </a>
-            <div className="top-menu">
-                <div className="user-menu">
-                    <img src="https://ui-avatars.com/api/?name=Admin&background=fff&color=000" className="user-image-sm" alt="User"/>
-                    <span className="hidden-xs">System Administrator</span>
-                </div>
+             </div>
+             
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-slate-300">
+                    <thead className="text-xs text-slate-400 uppercase bg-slate-950 border-b border-slate-700">
+                        <tr>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Description</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Max Vote</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Priority</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider text-right">Tools</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                        {positions.map(pos => (
+                            <tr key={pos.id} className="hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-white">{pos.description}</td>
+                                <td className="px-6 py-4">{pos.max_vote}</td>
+                                <td className="px-6 py-4">{pos.priority}</td>
+                                <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                                    <button onClick={() => openEditModal(pos)} className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded text-xs font-medium transition-colors border border-emerald-600/30"><i className="fa fa-edit"></i> Edit</button>
+                                    <button onClick={() => handleDelete(pos.id)} className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded text-xs font-medium transition-colors border border-rose-600/30"><i className="fa fa-trash"></i> Delete</button>
+                                </td>
+                            </tr>
+                        ))}
+                        {positions.length === 0 && !loading && (
+                            <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-500 italic">No positions found.</td></tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
-        </header>
+        </section>
 
-        <div className="content-wrapper">
-            <section className="content-header">
-                <h1>
-                    Positions
-                </h1>
-                <ol className="breadcrumb">
-                    <li><a href="/admin-dashboard"><i className="fa fa-home"></i> Home</a></li>
-                    <li className="active">Positions</li>
-                </ol>
-            </section>
-
-            <section className="content">
-                <div className="row">
-                    <div className="col-xs-12">
-                        <div className="box">
-                            <div className="box-header with-border" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                <a href="#addnew" onClick={(e) => {e.preventDefault(); openAddModal()}} className="btn btn-primary btn-sm btn-flat"><i className="fa fa-plus"></i> New</a>
-                            </div>
-                            <div className="box-body">
-                                <table className="table table-bordered table-striped table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Description</th>
-                                            <th>Max Vote</th>
-                                            <th>Priority</th>
-                                            <th>Tools</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {positions.map(pos => (
-                                            <tr key={pos.id}>
-                                                <td>{pos.description}</td>
-                                                <td>{pos.max_vote}</td>
-                                                <td>{pos.priority}</td>
-                                                <td>
-                                                    <button onClick={() => openEditModal(pos)} className="btn btn-success btn-sm btn-flat me-2"><i className="fa fa-edit"></i> Edit</button>
-                                                    <button onClick={() => handleDelete(pos.id)} className="btn btn-danger btn-sm btn-flat"><i className="fa fa-trash"></i> Delete</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {positions.length === 0 && !loading && (
-                                            <tr><td colSpan="4" className="text-center">No positions found.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+        {/* Modal */}
+        {showModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
+                <div className="relative bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-700 animate-slide-up flex flex-col">
+                    <div className="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-800/50">
+                        <h4 className="text-xl font-bold text-white">{editMode ? 'Edit Position' : 'Add New Position'}</h4>
+                        <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white transition-colors text-2xl leading-none">&times;</button>
                     </div>
-                </div>
-            </section>
-        </div>
-      </main>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-backdrop-custom">
-            <div className="modal-dialog">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h4 className="modal-title"><b>{editMode ? 'Edit Position' : 'Add New Position'}</b></h4>
-                        <button type="button" className="close" onClick={() => setShowModal(false)}>&times;</button>
-                    </div>
-                    <div className="modal-body">
-                        <form className="form-horizontal" onSubmit={handleSubmit}>
+                    
+                    <div className="p-6">
+                        <form onSubmit={handleSubmit} className="space-y-5">
                             {validationError && (
-                                <div className="alert alert-danger" style={{padding:'10px', marginBottom:'15px', whiteSpace: 'pre-line'}}>
-                                    <i className="fa fa-warning"></i> {validationError}
+                                <div className="bg-rose-500/10 border border-rose-500/50 text-rose-400 px-4 py-3 rounded-lg text-sm flex items-start gap-3">
+                                    <i className="fa fa-circle-exclamation mt-0.5"></i>
+                                    <span className="whitespace-pre-line">{validationError}</span>
                                 </div>
                             )}
 
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Description</label>
-                                <div className="col-sm-9">
-                                    <input type="text" className="form-control" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required placeholder="e.g., President" />
-                                </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-400">Description <span className="text-rose-500">*</span></label>
+                                <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required placeholder="e.g., President" />
                             </div>
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Max Vote</label>
-                                <div className="col-sm-9">
-                                    <input type="number" className="form-control" value={formData.max_vote} onChange={e => setFormData({...formData, max_vote: e.target.value})} required min="1" />
+                            
+                            <div className="grid grid-cols-2 gap-5">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Max Vote <span className="text-rose-500">*</span></label>
+                                    <input type="number" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" value={formData.max_vote} onChange={e => setFormData({...formData, max_vote: e.target.value})} required min="1" />
                                 </div>
-                            </div>
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Priority</label>
-                                <div className="col-sm-9">
-                                    <input type="number" className="form-control" value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} required placeholder="Higher number shows first" />
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Priority <span className="text-rose-500">*</span></label>
+                                    <input type="number" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} required placeholder="Order" />
                                 </div>
                             </div>
                             
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-default btn-flat pull-left" onClick={() => setShowModal(false)}><i className="fa fa-close"></i> Close</button>
-                                <button type="submit" className="btn btn-primary btn-flat" name="save"><i className="fa fa-save"></i> Save</button>
+                            <div className="pt-4 flex justify-end gap-3 border-t border-slate-800 mt-6">
+                                <button type="button" className="px-5 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-medium hover:bg-slate-800 transition-colors" onClick={() => setShowModal(false)}>Cancel</button>
+                                <button type="submit" className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2" name="save">
+                                    <i className="fa fa-save"></i> Save Position
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
-        </div>
-      )}
-      
-      <style>{`
-        .modal-backdrop-custom {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1050;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-dialog {
-            background: #fff;
-            width: 500px;
-            max-width: 90%;
-            border-radius: 5px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            overflow: hidden;
-        }
-        .modal-header {
-            padding: 15px;
-            border-bottom: 1px solid #f4f4f4;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .modal-body {
-            padding: 20px;
-        }
-        .modal-footer {
-            padding: 15px;
-            text-align: right;
-            border-top: 1px solid #f4f4f4;
-        }
-        .close {
-            background: none;
-            border: none;
-            font-size: 21px;
-            font-weight: 700;
-            line-height: 1;
-            color: #000;
-            text-shadow: 0 1px 0 #fff;
-            opacity: .2;
-            cursor: pointer;
-        }
-        .close:hover { opacity: .5; }
-        .alert-danger {
-            color: #a94442;
-            background-color: #f2dede;
-            border-color: #ebccd1;
-            border-radius: 4px;
-        }
-      `}</style>
-    </div>
+        )}
+    </DashboardLayout>
   )
 }
 

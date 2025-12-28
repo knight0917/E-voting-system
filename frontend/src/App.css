@@ -1,9 +1,0 @@
-/* 
-  Emptying default App constraints to allow full-screen layouts.
-  AdminDashboard.css handles specific layout needs.
-*/
-#root {
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}

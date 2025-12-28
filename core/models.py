@@ -14,7 +14,7 @@ class Candidate(models.Model):
     firstname = models.CharField(max_length=30)
     lastname = models.CharField(max_length=30)
     photo = models.ImageField(upload_to='candidates/photos/', blank=True, null=True)
-    platform = models.TextField(blank=True, null=True) # Made optional
+    manifesto = models.TextField(blank=True, null=True) # Renamed from platform
     
     # Identity
     IDENTITY_TYPE_CHOICES = [

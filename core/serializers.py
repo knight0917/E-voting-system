@@ -8,7 +8,7 @@ class CandidateSerializer(serializers.ModelSerializer):
         model = Candidate
         fields = [
             'id', 'position', 'position_name', 'candidate_id', 
-            'firstname', 'lastname', 'photo', 'platform', 
+            'firstname', 'lastname', 'photo', 'manifesto', 
             'identity_type', 'identity_number', 'gender', 'address',
             'party_type', 'party_name', 'symbol', 
             'is_approved'

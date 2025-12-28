@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import './AdminDashboard.css'
+import DashboardLayout from './DashboardLayout'
+
 
 function Candidates() {
   const [candidates, setCandidates] = useState([])
   const [positions, setPositions] = useState([])
   const [loading, setLoading] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768)
+
   const [showModal, setShowModal] = useState(false)
   const [editMode, setEditMode] = useState(false)
   
@@ -24,7 +25,8 @@ function Candidates() {
     party_type: 'independent',
     party_name: '',
     photo: null,
-    symbol: null
+    symbol: null,
+    manifesto: ''
   })
   
   const [validationError, setValidationError] = useState('');
@@ -40,9 +42,7 @@ function Candidates() {
     fetchCandidates()
     fetchPositions()
 
-    const handleResize = () => setIsSidebarOpen(window.innerWidth > 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    fetchPositions()
   }, [navigate, token])
 
   const fetchCandidates = async () => {
@@ -73,15 +73,7 @@ function Candidates() {
       }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token')
-    navigate('/admin-login')
-  }
 
-  const toggleSidebar = (e) => {
-      e.preventDefault();
-      setIsSidebarOpen(!isSidebarOpen);
-  }
 
   const openAddModal = () => {
       setFormData({ 
@@ -96,7 +88,8 @@ function Candidates() {
           party_type: 'independent',
           party_name: '',
           photo: null,
-          symbol: null
+          symbol: null,
+          manifesto: ''
         })
       setValidationError('');
       setEditMode(false)
@@ -116,7 +109,8 @@ function Candidates() {
           party_type: cand.party_type || 'independent',
           party_name: cand.party_name || '',
           photo: null, 
-          symbol: null
+          symbol: null,
+          manifesto: cand.manifesto || ''
       })
       setValidationError('');
       setEditMode(true)
@@ -148,6 +142,7 @@ function Candidates() {
       data.append('identity_number', formData.identity_number);
       data.append('gender', formData.gender);
       data.append('address', formData.address);
+      data.append('manifesto', formData.manifesto);
       data.append('party_type', formData.party_type);
       if(formData.party_type === 'party') {
           data.append('party_name', formData.party_name);
@@ -193,334 +188,189 @@ function Candidates() {
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Sidebar */}
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-            <span className="logo-lg"><b>Voting</b>System</span>
-        </div>
-        <div className="user-panel">
-            <div className="user-image">
-                <img src="https://ui-avatars.com/api/?name=Admin&background=fff&color=000" alt="User" />
-            </div>
-            <div className="user-info">
-                <p>System Administrator</p>
-                <span className="status"><i className="fa fa-circle text-success"></i> Online</span>
-            </div>
-        </div>
-        <ul className="sidebar-menu">
-            <li className="header">REPORTS</li>
-            <li><a href="/admin-dashboard"><i className="fa fa-gauge-high"></i> <span>Dashboard</span></a></li>
-            <li><a href="#"><i className="fa fa-lock"></i> <span>Votes</span></a></li>
-            
-            <li className="header">MANAGE</li>
-            <li><a href="/voters"><i className="fa fa-users"></i> <span>Voters</span></a></li>
-            <li><a href="/positions"><i className="fa fa-list-ul"></i> <span>Positions</span></a></li>
-            <li><a href="/candidates" className="active"><i className="fa fa-user-tie"></i> <span>Candidates</span></a></li>
-            
-            <li className="header">SETTINGS</li>
-            <li><a href="#"><i className="fa fa-file-lines"></i> <span>Ballot Position</span></a></li>
-            <li><a href="/election-title"><i className="fa fa-font"></i> <span>Election Title</span></a></li>
-            
-            <li className="header">EXIT</li>
-            <li>
-                <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-                    <i className="fa fa-power-off text-danger"></i> <span>Logout</span>
+    <DashboardLayout title="Candidates List" loading={loading}>
+        <section className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden animate-fade-in">
+             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
+                <a href="#addnew" onClick={(e) => {e.preventDefault(); openAddModal()}} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg shadow-indigo-500/20">
+                    <i className="fa fa-plus"></i> New Candidate
                 </a>
-            </li>
-        </ul>
-      </aside>
-
-      {/* Main Content */}
-      <main className="main-content">
-        <header className="top-bar">
-            <a href="#" className="sidebar-toggle" onClick={toggleSidebar}>
-                <i className="fa fa-bars"></i>
-            </a>
-            <div className="top-menu">
-                <div className="user-menu">
-                    <img src="https://ui-avatars.com/api/?name=Admin&background=fff&color=000" className="user-image-sm" alt="User"/>
-                    <span className="hidden-xs">System Administrator</span>
-                </div>
+             </div>
+             
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-slate-300">
+                    <thead className="text-xs text-slate-400 uppercase bg-slate-950 border-b border-slate-700">
+                        <tr>
+                            <th className="px-6 py-4 font-semibold tracking-wider">ID</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Position</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Name</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Party</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Identity</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Gender</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Photo</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Symbol</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider">Manifesto</th>
+                            <th className="px-6 py-4 font-semibold tracking-wider text-right">Tools</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                        {candidates.map(cand => (
+                            <tr key={cand.id} className="hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-4 font-mono text-slate-500">{cand.candidate_id}</td>
+                                <td className="px-6 py-4 font-medium text-white">{cand.position_name}</td>
+                                <td className="px-6 py-4 text-white">{cand.firstname} {cand.lastname}</td>
+                                <td className="px-6 py-4">
+                                    {cand.party_type === 'party' ? (
+                                        <span className="px-2 py-1 rounded text-xs font-semibold bg-indigo-900/50 text-indigo-300 border border-indigo-700/50">{cand.party_name}</span>
+                                    ) : (
+                                        <span className="px-2 py-1 rounded text-xs font-semibold bg-slate-700 text-slate-300 border border-slate-600">Independent</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className="block text-xs text-slate-500 uppercase">{cand.identity_type || 'N/A'}</span>
+                                    <span className="font-mono text-slate-300">{cand.identity_number}</span>
+                                </td>
+                                <td className="px-6 py-4">{cand.gender}</td>
+                                <td className="px-6 py-4">
+                                    <img 
+                                        src={cand.photo ? `http://127.0.0.1:8000${cand.photo}` : `https://ui-avatars.com/api/?name=${cand.firstname}+${cand.lastname}`} 
+                                        className="w-10 h-10 rounded-full border border-slate-600 object-cover" 
+                                        alt="Candidate"
+                                    />
+                                </td>
+                                <td className="px-6 py-4">
+                                    {cand.symbol && <img src={`http://127.0.0.1:8000${cand.symbol}`} className="w-10 h-10 object-contain rounded bg-white/5 p-1" alt="Symbol" />}
+                                </td>
+                                <td className="px-6 py-4 text-xs max-w-xs truncate text-slate-400">
+                                    {cand.manifesto ? (cand.manifesto.length > 50 ? cand.manifesto.substring(0, 50) + "..." : cand.manifesto) : <em>-</em>}
+                                </td>
+                                <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                                    <button onClick={() => openEditModal(cand)} className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded text-xs font-medium transition-colors border border-emerald-600/30"><i className="fa fa-edit"></i> Edit</button>
+                                    <button onClick={() => handleDelete(cand.id)} className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded text-xs font-medium transition-colors border border-rose-600/30"><i className="fa fa-trash"></i> Delete</button>
+                                </td>
+                            </tr>
+                        ))}
+                        {candidates.length === 0 && !loading && (
+                            <tr><td colSpan="10" className="px-6 py-8 text-center text-slate-500 italic">No candidates found. Click "New Candidate" to add one.</td></tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
-        </header>
+        </section>
 
-        <div className="content-wrapper">
-            <section className="content-header">
-                <h1>
-                    Candidates List
-                </h1>
-                <ol className="breadcrumb">
-                    <li><a href="/admin-dashboard"><i className="fa fa-home"></i> Home</a></li>
-                    <li className="active">Candidates</li>
-                </ol>
-            </section>
-
-            <section className="content">
-                <div className="row">
-                    <div className="col-xs-12">
-                        <div className="box">
-                            <div className="box-header with-border" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                <a href="#addnew" onClick={(e) => {e.preventDefault(); openAddModal()}} className="btn btn-primary btn-sm btn-flat"><i className="fa fa-plus"></i> New</a>
-                            </div>
-                            <div className="box-body">
-                                <table className="table table-bordered table-striped table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Position</th>
-                                            <th>Name</th>
-                                            <th>Party</th>
-                                            <th>Identity</th>
-                                            <th>Gender</th>
-                                            <th>Photo</th>
-                                            <th>Symbol</th>
-                                            <th>Tools</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {candidates.map(cand => (
-                                            <tr key={cand.id}>
-                                                <td>{cand.candidate_id}</td>
-                                                <td>{cand.position_name}</td>
-                                                <td>{cand.firstname} {cand.lastname}</td>
-                                                <td>
-                                                    {cand.party_type === 'party' ? (
-                                                        <span className="label label-primary">{cand.party_name}</span>
-                                                    ) : (
-                                                        <span className="label label-default">Independent</span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <small className="text-muted" style={{display:'block'}}>{cand.identity_type || 'N/A'}</small>
-                                                    {cand.identity_number}
-                                                </td>
-                                                <td>{cand.gender}</td>
-                                                <td>
-                                                    <img 
-                                                        src={cand.photo ? `http://127.0.0.1:8000${cand.photo}` : `https://ui-avatars.com/api/?name=${cand.firstname}+${cand.lastname}`} 
-                                                        width="30" height="30" 
-                                                        style={{borderRadius:'50%'}} 
-                                                        alt="Candidate"
-                                                    />
-                                                </td>
-                                                <td>
-                                                    {cand.symbol && <img src={`http://127.0.0.1:8000${cand.symbol}`} width="30" height="30" alt="Symbol" />}
-                                                </td>
-                                                <td>
-                                                    <button onClick={() => openEditModal(cand)} className="btn btn-success btn-sm btn-flat me-2"><i className="fa fa-edit"></i> Edit</button>
-                                                    <button onClick={() => handleDelete(cand.id)} className="btn btn-danger btn-sm btn-flat"><i className="fa fa-trash"></i> Delete</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {candidates.length === 0 && !loading && (
-                                            <tr><td colSpan="9" className="text-center">No candidates found.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+        {/* Modal */}
+        {showModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
+                <div className="relative bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-700 animate-slide-up max-h-[90vh] flex flex-col">
+                    <div className="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-800/50">
+                        <h4 className="text-xl font-bold text-white">{editMode ? 'Edit Candidate' : 'Add New Candidate'}</h4>
+                        <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white transition-colors text-2xl leading-none">&times;</button>
                     </div>
-                </div>
-            </section>
-        </div>
-      </main>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-backdrop-custom">
-            <div className="modal-dialog">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h4 className="modal-title"><b>{editMode ? 'Edit Candidate' : 'Add New Candidate'}</b></h4>
-                        <button type="button" className="close" onClick={() => setShowModal(false)}>&times;</button>
-                    </div>
-                    <div className="modal-body">
-                        <form className="form-horizontal" onSubmit={handleSubmit}>
+                    
+                    <div className="p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
+                        <form onSubmit={handleSubmit} className="space-y-5">
                             {validationError && (
-                                <div className="alert alert-danger" style={{padding:'10px', marginBottom:'15px', whiteSpace: 'pre-line'}}>
-                                    <i className="fa fa-warning"></i> {validationError}
+                                <div className="bg-rose-500/10 border border-rose-500/50 text-rose-400 px-4 py-3 rounded-lg text-sm flex items-start gap-3">
+                                    <i className="fa fa-circle-exclamation mt-0.5"></i>
+                                    <span className="whitespace-pre-line">{validationError}</span>
                                 </div>
                             )}
                             
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Position</label>
-                                <div className="col-sm-9">
-                                    <select className="form-control" value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} required>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Position <span className="text-rose-500">*</span></label>
+                                    <select className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none" value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} required>
                                         <option value="">Select Position</option>
                                         {positions.map(pos => (
                                             <option key={pos.id} value={pos.id}>{pos.description}</option>
                                         ))}
                                     </select>
                                 </div>
-                            </div>
-
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Firstname</label>
-                                <div className="col-sm-9">
-                                    <input type="text" className="form-control" value={formData.firstname} onChange={e => setFormData({...formData, firstname: e.target.value})} required />
-                                </div>
-                            </div>
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Lastname</label>
-                                <div className="col-sm-9">
-                                    <input type="text" className="form-control" value={formData.lastname} onChange={e => setFormData({...formData, lastname: e.target.value})} required />
-                                </div>
-                            </div>
-
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Gender</label>
-                                <div className="col-sm-9">
-                                    <select className="form-control" value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Gender</label>
+                                    <select className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none" value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
                                         <option value="Other">Other</option>
                                     </select>
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Firstname <span className="text-rose-500">*</span></label>
+                                    <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" value={formData.firstname} onChange={e => setFormData({...formData, firstname: e.target.value})} required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Lastname <span className="text-rose-500">*</span></label>
+                                    <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" value={formData.lastname} onChange={e => setFormData({...formData, lastname: e.target.value})} required />
+                                </div>
+                            </div>
                             
-                            {/* Party Info */}
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Affiliation</label>
-                                <div className="col-sm-9">
-                                    <select className="form-control" value={formData.party_type} onChange={e => setFormData({...formData, party_type: e.target.value})}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Affiliation</label>
+                                    <select className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none" value={formData.party_type} onChange={e => setFormData({...formData, party_type: e.target.value})}>
                                         <option value="independent">Independent</option>
                                         <option value="party">Political Party</option>
                                     </select>
                                 </div>
-                            </div>
-                            
-                            {formData.party_type === 'party' && (
-                                <div className="form-group mb-3">
-                                    <label className="col-sm-3 control-label">Party Name</label>
-                                    <div className="col-sm-9">
-                                        <input type="text" className="form-control" value={formData.party_name} onChange={e => setFormData({...formData, party_name: e.target.value})} required />
+                                {formData.party_type === 'party' && (
+                                    <div className="space-y-1 animate-fade-in">
+                                        <label className="text-sm font-medium text-slate-400">Party Name <span className="text-rose-500">*</span></label>
+                                        <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" value={formData.party_name} onChange={e => setFormData({...formData, party_name: e.target.value})} required />
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
-                            {/* Identity */}
-                             <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Identity Type</label>
-                                <div className="col-sm-9">
-                                    <select className="form-control" value={formData.identity_type} onChange={e => setFormData({...formData, identity_type: e.target.value})}>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Identity Type</label>
+                                    <select className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none" value={formData.identity_type} onChange={e => setFormData({...formData, identity_type: e.target.value})}>
                                         <option value="aadhaar">Aadhaar Card</option>
                                         <option value="voter_id">Voter ID Card</option>
                                         <option value="passport">Passport</option>
                                     </select>
                                 </div>
-                            </div>
-
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Identity No.</label>
-                                <div className="col-sm-9">
-                                    <input type="text" className="form-control" value={formData.identity_number} onChange={e => setFormData({...formData, identity_number: e.target.value})} required />
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Identity Number <span className="text-rose-500">*</span></label>
+                                    <input type="text" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" value={formData.identity_number} onChange={e => setFormData({...formData, identity_number: e.target.value})} required />
                                 </div>
                             </div>
 
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Address</label>
-                                <div className="col-sm-9">
-                                    <textarea className="form-control" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} required></textarea>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-400">Address <span className="text-rose-500">*</span></label>
+                                <textarea className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} required></textarea>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-400">Manifesto</label>
+                                <textarea className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" rows="3" value={formData.manifesto} onChange={e => setFormData({...formData, manifesto: e.target.value})} placeholder="Platform description..."></textarea>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Photo</label>
+                                    <input type="file" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-800 file:text-indigo-400 hover:file:bg-slate-700 transition-all border border-slate-700 rounded-lg cursor-pointer bg-slate-950" onChange={e => setFormData({...formData, photo: e.target.files[0]})} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-400">Symbol</label>
+                                    <input type="file" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-800 file:text-indigo-400 hover:file:bg-slate-700 transition-all border border-slate-700 rounded-lg cursor-pointer bg-slate-950" onChange={e => setFormData({...formData, symbol: e.target.files[0]})} />
                                 </div>
                             </div>
                             
-                            {/* Images */}
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Photo</label>
-                                <div className="col-sm-9">
-                                    <input type="file" className="form-control" onChange={e => setFormData({...formData, photo: e.target.files[0]})} />
-                                </div>
-                            </div>
-                            
-                            <div className="form-group mb-3">
-                                <label className="col-sm-3 control-label">Symbol</label>
-                                <div className="col-sm-9">
-                                    <input type="file" className="form-control" onChange={e => setFormData({...formData, symbol: e.target.files[0]})} />
-                                </div>
-                            </div>
-                            
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-default btn-flat pull-left" onClick={() => setShowModal(false)}><i className="fa fa-close"></i> Close</button>
-                                <button type="submit" className="btn btn-primary btn-flat" name="save"><i className="fa fa-save"></i> Save</button>
+                            <div className="pt-4 flex justify-end gap-3 border-t border-slate-800 mt-6">
+                                <button type="button" className="px-5 py-2.5 rounded-lg border border-slate-600 text-slate-300 font-medium hover:bg-slate-800 transition-colors" onClick={() => setShowModal(false)}>Cancel</button>
+                                <button type="submit" className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2" name="save">
+                                    <i className="fa fa-save"></i> Save Candidate
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
-        </div>
-      )}
-      
-      <style>{`
-        .modal-backdrop-custom {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1050;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-dialog {
-            background: #fff;
-            width: 500px;
-            max-width: 90%;
-            border-radius: 5px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            overflow: hidden;
-        }
-        .label {
-            display: inline;
-            padding: .2em .6em .3em;
-            font-size: 75%;
-            font-weight: 700;
-            line-height: 1;
-            color: #fff;
-            text-align: center;
-            white-space: nowrap;
-            vertical-align: baseline;
-            border-radius: .25em;
-        }
-        .label-primary { background-color: #3c8dbc; }
-        .label-default { background-color: #777; }
-        /* ... Reuse other styles from Voters.jsx ... */
-        .modal-header {
-            padding: 15px;
-            border-bottom: 1px solid #f4f4f4;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .modal-body {
-            padding: 20px;
-        }
-        .modal-footer {
-            padding: 15px;
-            text-align: right;
-            border-top: 1px solid #f4f4f4;
-        }
-        .close {
-            background: none;
-            border: none;
-            font-size: 21px;
-            font-weight: 700;
-            line-height: 1;
-            color: #000;
-            text-shadow: 0 1px 0 #fff;
-            opacity: .2;
-            cursor: pointer;
-        }
-        .alert-danger {
-            color: #a94442;
-            background-color: #f2dede;
-            border-color: #ebccd1;
-            border-radius: 4px;
-        }
-      `}</style>
-    </div>
+        )}
+    </DashboardLayout>
   )
 }
 
